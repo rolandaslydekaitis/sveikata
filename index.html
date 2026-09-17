@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="lt"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Seimos sveikata">
+<meta name="theme-color" content="#155e4a">
+<meta name="robots" content="noindex">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<!-- Favicon butinas: jei Chrome deda tik NUORODA (o ne diegia programa),
+     manifesto ikonu jis neima ir piesia pilka raide is pavadinimo. -->
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<title>Šeimos sveikata</title>
+<style>
+ html,body{margin:0;height:100%;overflow:hidden;background:#155e4a}
+ /* Google juosta nukerpama: remelis pastumiamas auksciau ir tiek pat paaukstinamas,
+    tad apacioje matomas plotas nepasislenka ir programeles mygtuku juosta lieka
+    savo vietoje. --kirpti yra vienintelis derinamas dydis; jis keiciamas TELEFONE
+    (trys bakstelejimai i virsutini kaireji kampa), nes idiegus programa adreso
+    juostos nebera ir ?kirpti irasyti nebutu kur. */
+ :root{--kirpti:0px}
+ #w{position:fixed;top:env(safe-area-inset-top);left:0;right:0;bottom:0;overflow:hidden}
+ iframe{position:absolute;left:0;width:100%;border:0;
+        top:calc(-1 * var(--kirpti));height:calc(100% + var(--kirpti))}
+ /* Mazas nematomas kampas derinimui. 16 px is placios korteles - programeles
+    virsutine juosta lieka naudojama. */
+ #kampas{position:fixed;top:0;left:0;width:16px;height:16px;z-index:9}
+ #d{position:fixed;left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom));
+    background:#1a1a1aee;color:#fff;border-radius:14px;padding:12px;z-index:10;
+    font:14px/1.4 -apple-system,Roboto,Segoe UI,sans-serif;text-align:center}
+ #d div{display:flex;gap:8px;margin-top:9px}
+ #d button{flex:1;padding:13px;border:0;border-radius:10px;background:#3a3a3a;
+           color:#fff;font-size:17px;font-weight:600}
+ #d button.ok{background:#155e4a}
+ #k{padding:28px 22px;color:#fff;font:16px/1.5 -apple-system,Roboto,Segoe UI,sans-serif}
+ #k h1{font-size:19px;margin:0 0 10px}
+ #k p{color:#CFE8E4;font-size:14px}
+ #k input{width:100%;padding:13px;border:0;border-radius:10px;font-size:15px;margin:10px 0}
+ #k button{width:100%;padding:15px;border:0;border-radius:11px;background:#fff;
+           color:#155e4a;font-size:16px;font-weight:600}
+</style></head><body>
+<div id="w"></div>
+<div id="kampas"></div>
+<script>
+var RAKTAS = 'sveikata_adresas', RAKTAS_K = 'sveikata_kirpti';
+
+function ideti(u){
+  document.getElementById('w').innerHTML =
+    '<iframe src="' + u.replace(/"/g,'&quot;') + '" allow="screen-wake-lock;clipboard-write"></iframe>';
+}
+
+function klausti(){
+  document.getElementById('w').innerHTML =
+    '<div id="k"><h1>Programėlės adresas</h1>' +
+    '<p>Įklijuok šeimos nuorodą (baigiasi <b>/exec?k=...</b>). Ji bus išsaugota šiame ' +
+    'telefone, daugiau nebeklaus. Nuoroda niekur nesiunčiama, bet jos niekam nerodyk: ' +
+    'raktas joje yra durų užraktas.</p>' +
+    '<input id="a" type="url" placeholder="https://script.google.com/macros/s/.../exec?k=..." ' +
+    'autocomplete="off" autocapitalize="off" spellcheck="false">' +
+    '<button id="b">Įrašyti</button></div>';
+  document.getElementById('b').onclick = function(){
+    var u = document.getElementById('a').value.trim();
+    if (u.indexOf('https://script.google.com/') !== 0 || u.indexOf('k=') < 0){
+      alert('Nuoroda turi prasidėti https://script.google.com/ ir turėti raktą ?k=...'); return;
+    }
+    try { localStorage.setItem(RAKTAS, u); } catch(e) {}
+    ideti(u);
+  };
+}
+
+/* ---- kirpimo derinimas ----
+   Kiek nukirpti nuo virsaus, is anksto tiksliai nezinoma: tai Google puslapio
+   juostos aukstis, kuris skiriasi pagal telefona ir gali pasikeisti. Todel
+   reiksme keiciama vietoje ir issaugoma sitame telefone. */
+function kirpti(n){
+  n = Math.max(0, Math.min(160, n));
+  document.documentElement.style.setProperty('--kirpti', n + 'px');
+  try { localStorage.setItem(RAKTAS_K, n); } catch(e) {}
+  return n;
+}
+function derinti(){
+  if (document.getElementById('d')) return;
+  var n = parseInt(getComputedStyle(document.documentElement)
+            .getPropertyValue('--kirpti'), 10) || 0;
+  var d = document.createElement('div');
+  d.id = 'd';
+  d.innerHTML = 'Nukirpta nuo viršaus: <b id="dv">' + n + '</b> px<br>' +
+    '<span style="color:#aaa;font-size:12px">Tiek, kad dingtų Google juosta, ' +
+    'bet liktų matoma programėlės antraštė.</span>' +
+    '<div><button id="dm">−</button><button id="dp">+</button>' +
+    '<button id="dg" class="ok">Gerai</button></div>';
+  document.body.appendChild(d);
+  var rodyk = function(v){ document.getElementById('dv').textContent = v; };
+  document.getElementById('dm').onclick = function(){ rodyk(kirpti(n -= 4)); };
+  document.getElementById('dp').onclick = function(){ rodyk(kirpti(n += 4)); };
+  document.getElementById('dg').onclick = function(){ d.parentNode.removeChild(d); };
+}
+
+/* Trys bakstelejimai i kampa per 1,5 sek. Atsitiktinai nepataikysi, o adreso
+   juostos idiegtoje programoje nera, tad kito kelio i derinima nebutu. */
+(function(){
+  var b = 0, t = 0;
+  document.getElementById('kampas').onclick = function(){
+    var dabar = new Date().getTime();
+    b = (dabar - t > 1500) ? 1 : b + 1;
+    t = dabar;
+    if (b >= 3){ b = 0; derinti(); }
+  };
+})();
+
+var kn = null;
+try { kn = localStorage.getItem(RAKTAS_K); } catch(e) {}
+if (kn !== null) kirpti(parseInt(kn, 10));
+if (location.search.indexOf('kirpti') > -1) derinti();
+
+/* ?keisti - kai reikia perrasyti adresa (naujas Deployment su nauju URL). */
+var u = null;
+try { u = localStorage.getItem(RAKTAS); } catch(e) {}
+if (location.search.indexOf('keisti') > -1) u = null;
+u ? ideti(u) : klausti();
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+</script>
+</body></html>
